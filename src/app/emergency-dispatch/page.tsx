@@ -14,17 +14,16 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, MapPin, Send, Sparkles, Stethoscope, Clock, Info, ListOrdered, CheckCircle, Zap, Thermometer, Mic } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Separator } from "@/components/ui/separator";
 
-// Mock hospital data (as used in recommendations page)
-const mockHospitalData: HospitalDataForAI[] = [
-  { hospitalName: "City General Hospital", hospitalLocation: "123 Main St, Cityville", capacity: 85, specialties: ["Cardiology", "Neurology", "Trauma"] },
-  { hospitalName: "Suburb Community Hospital", hospitalLocation: "456 Oak Ave, Suburbia", capacity: 60, specialties: ["Pediatrics", "General Surgery"] },
-  { hospitalName: "Metro Health Center", hospitalLocation: "789 Pine Ln, Metropolis", capacity: 95, specialties: ["Oncology", "Trauma", "Orthopedics"] },
-  { hospitalName: "Riverside Medical", hospitalLocation: "101 River Rd, Riverside", capacity: 70, specialties: ["Cardiology", "Pulmonology"] },
-  { hospitalName: "Saint Luke's Emergency", hospitalLocation: "202 Church St, Old Town", capacity: 50, specialties: ["Emergency Medicine", "Trauma"] },
-  { hospitalName: "University Medical Campus", hospitalLocation: "303 College Dr, University City", capacity: 90, specialties: ["Neurology", "Neurosurgery", "Burn Unit"] },
-  { hospitalName: "Hope Children's Hospital", hospitalLocation: "404 Kids Way, Childstown", capacity: 75, specialties: ["Pediatrics", "Pediatric Surgery"] },
+// Mock hospital data for Seoul Tertiary Hospitals
+const mockSeoulHospitalData: HospitalDataForAI[] = [
+  { hospitalName: "서울대학교병원", hospitalLocation: "서울특별시 종로구 대학로 101", capacity: 90, specialties: ["응급의학", "외상센터", "심뇌혈관센터", "중환자실"] , id: "HOS_SNUH" },
+  { hospitalName: "세브란스병원", hospitalLocation: "서울특별시 서대문구 연세로 50-1", capacity: 85, specialties: ["응급의학", "심장내과", "신경외과", "소아응급"] , id: "HOS_SEVERANCE"},
+  { hospitalName: "서울아산병원", hospitalLocation: "서울특별시 송파구 올림픽로43길 88", capacity: 95, specialties: ["응급의학", "외상센터", "암센터", "장기이식"] , id: "HOS_ASAN"},
+  { hospitalName: "삼성서울병원", hospitalLocation: "서울특별시 강남구 일원로 81", capacity: 88, specialties: ["응급의학", "뇌졸중센터", "심장센터", "중환자실"] , id: "HOS_SAMSUNG"},
+  { hospitalName: "서울성모병원", hospitalLocation: "서울특별시 서초구 반포대로 222", capacity: 82, specialties: ["응급의학", "혈액내과", "순환기내과", "뇌신경센터"], id: "HOS_STMARY" },
+  { hospitalName: "고려대학교 안암병원", hospitalLocation: "서울특별시 성북구 고려대로 73", capacity: 75, specialties: ["응급의학", "외상외과", "소화기내과"] , id: "HOS_KUANAM"},
+  { hospitalName: "경희대학교병원", hospitalLocation: "서울특별시 동대문구 경희대로 23", capacity: 70, specialties: ["응급의학", "한방협진", "관절류마티스"] , id: "HOS_KHU"},
 ];
 
 export default function EmergencyDispatchPage() {
@@ -40,13 +39,13 @@ export default function EmergencyDispatchPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    setAmbulanceLocation("Central City Park"); // Default or use geolocation
+    setAmbulanceLocation("강남역 부근"); // Default Seoul location
   }, []);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!voiceInput.trim() || !ambulanceLocation.trim()) {
-      setError("Patient condition input and ambulance location cannot be empty.");
+      setError("환자 상태 정보와 구급차 위치는 비워둘 수 없습니다.");
       return;
     }
 
@@ -60,32 +59,41 @@ export default function EmergencyDispatchPage() {
       const conditionResult = await assessCondition(conditionInput);
       setAssessedConditionResult(conditionResult);
       toast({
-        title: "Condition Assessed",
-        description: "Patient condition has been initially assessed.",
+        title: "상태 평가 완료",
+        description: "환자 상태가 초기 평가되었습니다.",
       });
 
       setIsLoadingCondition(false);
       setIsLoadingHospitals(true);
 
+      // Pass hospital IDs along with other data for the AI flow
+      const hospitalDataForAI = mockSeoulHospitalData.map(h => ({
+        hospitalName: h.hospitalName,
+        hospitalLocation: h.hospitalLocation,
+        capacity: h.capacity,
+        specialties: h.specialties,
+        // id: h.id // Pass ID if your AI flow can use it for context or if recommendations should include it
+      }));
+
       const recommendationInput: SmartHospitalRecommendationInput = {
         patientCondition: conditionResult.patientState,
         ambulanceLocation,
-        hospitalData: mockHospitalData,
+        hospitalData: hospitalDataForAI,
       };
       const recommendationResult = await smartHospitalRecommendation(recommendationInput);
       setHospitalRecommendations(recommendationResult);
       toast({
-        title: "Hospitals Recommended",
-        description: "AI has provided hospital recommendations based on assessed condition.",
+        title: "병원 추천 완료",
+        description: "AI가 평가된 상태에 따라 병원을 추천했습니다.",
       });
 
     } catch (e) {
       console.error(e);
-      const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
-      setError(`Processing failed: ${errorMessage}`);
+      const errorMessage = e instanceof Error ? e.message : "알 수 없는 오류가 발생했습니다.";
+      setError(`처리 실패: ${errorMessage}`);
       toast({
-        title: "Processing Failed",
-        description: `Error: ${errorMessage}`,
+        title: "처리 실패",
+        description: `오류: ${errorMessage}`,
         variant: "destructive",
       });
     } finally {
@@ -100,10 +108,10 @@ export default function EmergencyDispatchPage() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Zap className="h-8 w-8 text-primary" />
-            <CardTitle className="text-2xl">Emergency Dispatch Console</CardTitle>
+            <CardTitle className="text-2xl">응급 출동 관제 콘솔</CardTitle>
           </div>
           <CardDescription>
-            Input patient details and ambulance location for AI-powered condition assessment and hospital matching.
+            환자 정보 및 구급차 위치를 입력하여 AI 기반 상태 평가 및 병원 매칭을 수행합니다. (데이터: 서울시 기준)
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
@@ -112,11 +120,11 @@ export default function EmergencyDispatchPage() {
               <div className="space-y-2">
                 <Label htmlFor="voiceInput" className="text-base font-medium flex items-center">
                   <Mic className="mr-2 h-5 w-5 text-muted-foreground" />
-                  Operator Input (Transcription)
+                  상황실 교신 내용 (음성 텍스트 변환)
                 </Label>
                 <Textarea
                   id="voiceInput"
-                  placeholder="E.g., 'Patient is a 45-year-old male, complaining of severe chest pain...'"
+                  placeholder="예: 45세 남성, 극심한 흉통과 호흡 곤란 호소..."
                   value={voiceInput}
                   onChange={(e) => setVoiceInput(e.target.value)}
                   rows={5}
@@ -124,18 +132,18 @@ export default function EmergencyDispatchPage() {
                   disabled={isLoadingCondition || isLoadingHospitals}
                 />
                  <p className="text-xs text-muted-foreground">
-                  Simulate voice input by typing the transcribed text.
+                  음성 입력을 시뮬레이션하여 텍스트를 입력합니다.
                 </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ambulanceLocation" className="text-base font-medium flex items-center">
                   <MapPin className="mr-2 h-5 w-5 text-muted-foreground" />
-                  Ambulance Location
+                  구급차 현재 위치
                 </Label>
                 <Input
                   id="ambulanceLocation"
                   type="text"
-                  placeholder="E.g., 'Cross St & Main Ave' or GPS coordinates"
+                  placeholder="예: '강남구 테헤란로 123' 또는 GPS 좌표"
                   value={ambulanceLocation}
                   onChange={(e) => setAmbulanceLocation(e.target.value)}
                   className="text-base"
@@ -145,7 +153,7 @@ export default function EmergencyDispatchPage() {
             </div>
             {error && (
               <Alert variant="destructive">
-                <AlertTitle>Error</AlertTitle>
+                <AlertTitle>오류</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
@@ -155,12 +163,12 @@ export default function EmergencyDispatchPage() {
               {(isLoadingCondition || isLoadingHospitals) ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Processing...
+                  처리 중...
                 </>
               ) : (
                 <>
                   <Send className="mr-2 h-5 w-5" />
-                  Assess & Find Hospitals
+                  상태 평가 및 병원 검색
                 </>
               )}
             </Button>
@@ -172,7 +180,7 @@ export default function EmergencyDispatchPage() {
         <Card className="shadow-xl">
           <CardContent className="pt-6 text-center">
             <Loader2 className="h-8 w-8 text-primary animate-spin mb-2 mx-auto" />
-            <p className="text-muted-foreground">Assessing patient condition...</p>
+            <p className="text-muted-foreground">환자 상태 평가 중...</p>
           </CardContent>
         </Card>
       )}
@@ -182,17 +190,17 @@ export default function EmergencyDispatchPage() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <Thermometer className="h-7 w-7 text-primary" />
-              <CardTitle className="text-xl">Patient Condition Assessment</CardTitle>
+              <CardTitle className="text-xl">환자 상태 평가 결과</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <h3 className="text-md font-semibold">AI Classified Patient State:</h3>
+              <h3 className="text-md font-semibold">AI 분류 환자 상태:</h3>
               <p className="text-lg p-3 bg-secondary/30 rounded-md border border-secondary text-secondary-foreground">
                 {assessedConditionResult.patientState}
               </p>
               <p className="text-xs text-muted-foreground">
-                This classification is based on AI analysis. Always confirm with medical protocols.
+                이 분류는 AI 분석에 기반한 것입니다. 항상 의료 프로토콜을 확인하십시오.
               </p>
             </div>
           </CardContent>
@@ -203,7 +211,7 @@ export default function EmergencyDispatchPage() {
          <Card className="shadow-xl">
           <CardContent className="pt-6 text-center">
             <Loader2 className="h-8 w-8 text-primary animate-spin mb-2 mx-auto" />
-            <p className="text-muted-foreground">Finding suitable hospitals...</p>
+            <p className="text-muted-foreground">적합한 병원 검색 중...</p>
           </CardContent>
         </Card>
       )}
@@ -213,9 +221,9 @@ export default function EmergencyDispatchPage() {
           <CardHeader>
              <div className="flex items-center gap-2">
                 <ListOrdered className="h-7 w-7 text-primary" />
-                <CardTitle className="text-xl">Top Hospital Recommendations</CardTitle>
+                <CardTitle className="text-xl">추천 병원 목록</CardTitle>
             </div>
-            <CardDescription>Based on assessed condition ({assessedConditionResult?.patientState}), location, and hospital data.</CardDescription>
+            <CardDescription>평가된 상태({assessedConditionResult?.patientState}), 위치 및 병원 데이터를 기반으로 합니다.</CardDescription>
           </CardHeader>
           <CardContent>
             <Accordion type="single" collapsible className="w-full space-y-4">
@@ -239,17 +247,17 @@ export default function EmergencyDispatchPage() {
                     <div className="space-y-3">
                         <div className="flex items-center gap-2">
                             <Clock className="h-4 w-4 text-muted-foreground" />
-                            <p><strong>Estimated Arrival Time:</strong> {rec.estimatedArrivalTime}</p>
+                            <p><strong>예상 도착 시간:</strong> {rec.estimatedArrivalTime}</p>
                         </div>
                          <div className="flex items-start gap-2">
                             <Info className="h-4 w-4 text-muted-foreground mt-1 shrink-0" />
                             <div>
-                                <p><strong>Reasoning:</strong></p>
+                                <p><strong>추천 사유:</strong></p>
                                 <p className="pl-1 text-muted-foreground">{rec.reasoning}</p>
                             </div>
                         </div>
-                        <Button variant="outline" size="sm" className="mt-2" onClick={() => toast({title: `Dispatching to ${rec.hospitalName}`, description: "This is a simulated action."})}>
-                            Dispatch to {rec.hospitalName}
+                        <Button variant="outline" size="sm" className="mt-2" onClick={() => toast({title: `${rec.hospitalName}(으)로 이송 지시`, description: "이것은 시뮬레이션된 작업입니다."})}>
+                            {rec.hospitalName}(으)로 이송
                         </Button>
                     </div>
                   </AccordionContent>
@@ -263,13 +271,11 @@ export default function EmergencyDispatchPage() {
         <Card className="shadow-xl">
             <CardContent className="pt-6 text-center">
                 <Sparkles className="h-10 w-10 text-muted-foreground mb-3 mx-auto" />
-                <p className="text-lg">No hospital recommendations available.</p>
-                <p className="text-sm text-muted-foreground">Try adjusting criteria or ensure hospital data is current.</p>
+                <p className="text-lg">추천 가능한 병원이 없습니다.</p>
+                <p className="text-sm text-muted-foreground">조건을 조정하거나 병원 데이터가 최신인지 확인하십시오.</p>
             </CardContent>
         </Card>
        )}
     </div>
   );
 }
-
-    
