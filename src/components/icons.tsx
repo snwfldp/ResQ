@@ -33,14 +33,15 @@ import {
   Thermometer,
   Mic,
   ListFilter,
-  RefreshCw
+  RefreshCw,
+  Zap, // Added Zap
 } from 'lucide-react';
 
 export const Icons = {
   Home,
   Activity,
   Waypoints,
-  HospitalIcon: Hospital, // Renamed to avoid conflict if 'Hospital' is used as a component name
+  HospitalIcon: Hospital, 
   MapPin,
   Siren,
   AlertTriangle,
@@ -69,7 +70,10 @@ export const Icons = {
   Thermometer,
   Mic,
   ListFilter,
-  RefreshCw
+  RefreshCw,
+  Zap, // Added Zap
 };
 
 export type Icon = keyof typeof Icons;
+
+    

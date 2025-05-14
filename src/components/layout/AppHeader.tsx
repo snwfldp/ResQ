@@ -12,10 +12,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useSidebar } from "@/components/ui/sidebar"; // Ensure this hook exists and works
+import { useSidebar } from "@/components/ui/sidebar"; 
 
 const navItems = [
   { href: "/", label: "Dashboard" },
+  { href: "/emergency-dispatch", label: "Emergency Dispatch" },
   { href: "/assessment", label: "Condition Assessment" },
   { href: "/recommendations", label: "Hospital Finder" },
   { href: "/hospital-portal", label: "Hospital Portal" },
@@ -66,3 +67,5 @@ export function AppHeader() {
     </header>
   );
 }
+
+    

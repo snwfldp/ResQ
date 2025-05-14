@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Activity,
-  AlertTriangle,
   ClipboardList,
   Home,
   Hospital,
@@ -13,6 +12,7 @@ import {
   Siren,
   ShieldCheck,
   Waypoints,
+  Zap, // Added Zap
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -26,11 +26,10 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
-import Image from "next/image";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: Home },
+  { href: "/emergency-dispatch", label: "Emergency Dispatch", icon: Zap },
   { href: "/assessment", label: "Condition Assessment", icon: Activity },
   { href: "/recommendations", label: "Hospital Finder", icon: Waypoints },
   { href: "/hospital-portal", label: "Hospital Portal", icon: Hospital },
@@ -86,3 +85,5 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
+
+    

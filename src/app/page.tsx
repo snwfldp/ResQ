@@ -1,7 +1,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Activity, AlertTriangle, ArrowRight, Bell, Hospital, ListChecks, MapPin, Siren, Users, Waypoints } from "lucide-react";
+import { Activity, AlertTriangle, ArrowRight, Bell, Hospital, ListChecks, MapPin, Siren, Users, Waypoints, Zap } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -14,8 +14,7 @@ export default function DashboardPage() {
   ];
 
   const quickActions = [
-    { label: "New Incident Report", href: "/assessment", icon: Activity },
-    { label: "Find Best Hospital", href: "/recommendations", icon: Waypoints },
+    { label: "New Emergency Dispatch", href: "/emergency-dispatch", icon: Zap },
     { label: "View Hospital Portal", href: "/hospital-portal", icon: ListChecks },
     { label: "Track Ambulances", href: "/tracking", icon: MapPin },
   ];
@@ -52,7 +51,7 @@ export default function DashboardPage() {
           <CardTitle>Quick Actions</CardTitle>
           <CardDescription>Access key platform features quickly.</CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"> {/* Adjusted grid to 3 cols */}
           {quickActions.map((action) => (
             <Link href={action.href} key={action.label} passHref>
               <Button variant="outline" className="w-full justify-start text-left h-auto py-3 shadow-sm hover:shadow-md transition-shadow">
@@ -130,3 +129,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
