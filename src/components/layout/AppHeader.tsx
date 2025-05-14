@@ -14,18 +14,24 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useSidebar } from "@/components/ui/sidebar"; 
 
+// Updated navItems for page title lookup, removing deprecated pages
 const navItems = [
   { href: "/", label: "Dashboard" },
   { href: "/emergency-dispatch", label: "Emergency Dispatch" },
-  { href: "/assessment", label: "Condition Assessment" },
-  { href: "/recommendations", label: "Hospital Finder" },
   { href: "/hospital-portal", label: "Hospital Portal" },
   { href: "/tracking", label: "Ambulance Tracking" },
 ];
 
 function getPageTitle(pathname: string): string {
   const item = navItems.find((navItem) => navItem.href === pathname);
-  return item ? item.label : "ResQ";
+  if (item) return item.label;
+
+  // Fallback for pages not explicitly in navItems, like grouped ones
+  if (pathname.startsWith("/emergency-dispatch")) return "Emergency Dispatch";
+  if (pathname.startsWith("/hospital-portal")) return "Hospital Portal";
+  if (pathname.startsWith("/tracking")) return "Ambulance Tracking";
+  
+  return "ResQ"; // Default title
 }
 
 export function AppHeader() {
@@ -67,5 +73,3 @@ export function AppHeader() {
     </header>
   );
 }
-
-    

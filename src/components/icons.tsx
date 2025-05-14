@@ -34,7 +34,10 @@ import {
   Mic,
   ListFilter,
   RefreshCw,
-  Zap, // Added Zap
+  Zap,
+  LayoutDashboard, // Added for sidebar group
+  BriefcaseMedical, // Added for sidebar group (example)
+  Building, // Added for sidebar group (example)
 } from 'lucide-react';
 
 export const Icons = {
@@ -71,9 +74,10 @@ export const Icons = {
   Mic,
   ListFilter,
   RefreshCw,
-  Zap, // Added Zap
+  Zap,
+  LayoutDashboard,
+  BriefcaseMedical,
+  Building,
 };
 
 export type Icon = keyof typeof Icons;
-
-    

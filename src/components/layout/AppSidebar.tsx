@@ -5,14 +5,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Activity,
-  ClipboardList,
   Home,
   Hospital,
   MapPin,
   Siren,
   ShieldCheck,
-  Waypoints,
-  Zap, // Added Zap
+  Zap,
+  LayoutDashboard, // Using LayoutDashboard for Overview group if Home is for specific page
+  BriefcaseMedical, // Example icon for Ambulance Operations
+  Building, // Example icon for Hospital Interface
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -24,16 +25,34 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarFooter,
+  SidebarGroup,
+  SidebarGroupLabel,
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 
-const navItems = [
-  { href: "/", label: "Dashboard", icon: Home },
-  { href: "/emergency-dispatch", label: "Emergency Dispatch", icon: Zap },
-  { href: "/assessment", label: "Condition Assessment", icon: Activity },
-  { href: "/recommendations", label: "Hospital Finder", icon: Waypoints },
-  { href: "/hospital-portal", label: "Hospital Portal", icon: Hospital },
-  { href: "/tracking", label: "Ambulance Tracking", icon: MapPin },
+const sidebarConfig = [
+  {
+    groupLabel: "Overview",
+    groupIcon: LayoutDashboard,
+    items: [
+      { href: "/", label: "Dashboard", icon: Home },
+    ],
+  },
+  {
+    groupLabel: "Ambulance Operations",
+    groupIcon: Siren, // Using Siren as it's representative
+    items: [
+      { href: "/emergency-dispatch", label: "Emergency Dispatch", icon: Zap },
+      { href: "/tracking", label: "Ambulance Tracking", icon: MapPin },
+    ],
+  },
+  {
+    groupLabel: "Hospital Interface",
+    groupIcon: Hospital, // Using Hospital icon
+    items: [
+      { href: "/hospital-portal", label: "Hospital Portal", icon: Building }, // Or use Hospital icon again
+    ],
+  },
 ];
 
 export function AppSidebar() {
@@ -51,30 +70,38 @@ export function AppSidebar() {
       </SidebarHeader>
       <Separator className="mb-2" />
       <SidebarContent>
-        <SidebarMenu>
-          {navItems.map((item) => (
-            <SidebarMenuItem key={item.href}>
-              <Link href={item.href} legacyBehavior passHref>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === item.href}
-                  className={cn(
-                    "justify-start",
-                    pathname === item.href && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90"
-                  )}
-                  tooltip={item.label}
-                >
-                  <a>
-                    <item.icon className="h-5 w-5" />
-                    <span className="group-data-[collapsible=icon]:hidden">
-                      {item.label}
-                    </span>
-                  </a>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
+        {sidebarConfig.map((group) => (
+          <SidebarGroup key={group.groupLabel}>
+            <SidebarGroupLabel className="flex items-center gap-2">
+              <group.groupIcon className="h-4 w-4" />
+              <span className="group-data-[collapsible=icon]:hidden">{group.groupLabel}</span>
+            </SidebarGroupLabel>
+            <SidebarMenu>
+              {group.items.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <Link href={item.href} legacyBehavior passHref>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname === item.href}
+                      className={cn(
+                        "justify-start",
+                        pathname === item.href && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90"
+                      )}
+                      tooltip={item.label}
+                    >
+                      <a>
+                        <item.icon className="h-5 w-5" />
+                        <span className="group-data-[collapsible=icon]:hidden">
+                          {item.label}
+                        </span>
+                      </a>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
       <SidebarFooter className="p-4 mt-auto border-t border-sidebar-border">
         <div className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
@@ -85,5 +112,3 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
-
-    
