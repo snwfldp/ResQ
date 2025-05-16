@@ -1,5 +1,3 @@
-# Firebase Studio
+# ResQ
 
-This is a NextJS starter in Firebase Studio.
-
-To get started, take a look at src/app/page.tsx.
+ResQ is a platform that helps ambulances transporting patients swiftly deliver them to the emergency departments of university hospitals.
