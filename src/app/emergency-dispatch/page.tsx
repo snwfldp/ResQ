@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState, type FormEvent, useEffect } from "react";
+import { useState, type FormEvent, useEffect, useRef } from "react";
 import { assessCondition, type AssessConditionInput, type AssessConditionOutput } from "@/ai/flows/condition-assessment";
 import { smartHospitalRecommendation, type SmartHospitalRecommendationInput, type SmartHospitalRecommendationOutput } from "@/ai/flows/smart-hospital-recommendation";
 import type { HospitalDataForAI } from "@/types";
@@ -29,6 +28,8 @@ const mockSeoulHospitalData: HospitalDataForAI[] = [
 export default function EmergencyDispatchPage() {
   const [voiceInput, setVoiceInput] = useState<string>("");
   const [ambulanceLocation, setAmbulanceLocation] = useState<string>("");
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
   
   const [assessedConditionResult, setAssessedConditionResult] = useState<AssessConditionOutput | null>(null);
   const [hospitalRecommendations, setHospitalRecommendations] = useState<SmartHospitalRecommendationOutput | null>(null);
@@ -37,10 +38,107 @@ export default function EmergencyDispatchPage() {
   const [isLoadingHospitals, setIsLoadingHospitals] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    setAmbulanceLocation("Near Gangnam Station"); // Default Seoul location
+    let intervalId: NodeJS.Timeout | null = null;
+
+    // 위치 갱신 함수
+    const updateLocation = () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+            setAmbulanceLocation(`${latitude}° N, ${longitude}° E`);
+          },
+          (error) => {
+            setAmbulanceLocation("위치 정보를 가져올 수 없습니다.");
+          }
+        );
+      }
+    };
+
+    // 최초 1회 위치 갱신
+    updateLocation();
+
+    // 10초마다 위치 갱신
+    intervalId = setInterval(updateLocation, 10000);
+
+    // 언마운트 시 인터벌 해제
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
   }, []);
+
+  // 음성 인식 시작
+  const startListening = () => {
+    if (!("webkitSpeechRecognition" in window)) {
+      toast({ title: "지원되지 않는 브라우저", description: "이 브라우저는 음성 인식을 지원하지 않습니다.", variant: "destructive" });
+      return;
+    }
+    const recognition = new (window as any).webkitSpeechRecognition();
+    recognition.lang = "ko-KR";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setVoiceInput(transcript);
+      setIsListening(false);
+      setIsLoadingCondition(true);
+      setError(null);
+      setAssessedConditionResult(null);
+      setHospitalRecommendations(null);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      // Genkit로 분석
+      assessCondition({ voiceInput: transcript }).then((result) => {
+        setAssessedConditionResult(result);
+        toast({ title: "상태 분석 완료", description: "환자 상태가 AI에 의해 분석되었습니다." });
+        // 병원 추천
+        setIsLoadingHospitals(true);
+        const hospitalDataForAI = mockSeoulHospitalData.map(h => ({
+          hospitalName: h.hospitalName,
+          hospitalLocation: h.hospitalLocation,
+          capacity: h.capacity,
+          specialties: h.specialties,
+        }));
+        const recommendationInput = {
+          patientCondition: result.patientState,
+          ambulanceLocation,
+          hospitalData: hospitalDataForAI,
+        };
+        smartHospitalRecommendation(recommendationInput).then((recommendationResult) => {
+          setHospitalRecommendations(recommendationResult);
+          toast({ title: "병원 추천 완료", description: "AI가 분석된 상태를 기반으로 병원을 추천했습니다." });
+        }).finally(() => setIsLoadingHospitals(false));
+      }).catch((e) => {
+        setError("상태 분석 실패: " + (e?.message || "오류"));
+        toast({ title: "상태 분석 실패", description: e?.message || "오류", variant: "destructive" });
+      }).finally(() => setIsLoadingCondition(false));
+    };
+    recognition.onerror = () => {
+      setIsListening(false);
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+    recognition.onend = () => {
+      setIsListening(false);
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+    recognition.start();
+    setIsListening(true);
+    recognitionRef.current = recognition;
+    // 10초 후 자동 종료
+    timerRef.current = setTimeout(() => {
+      recognition.stop();
+      setIsListening(false);
+      toast({ title: "음성 인식 종료", description: "10초간 음성 인식이 완료되었습니다." });
+    }, 10000);
+  };
+
+  const stopListening = () => {
+    recognitionRef.current?.stop();
+    setIsListening(false);
+    if (timerRef.current) clearTimeout(timerRef.current);
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -120,17 +218,29 @@ export default function EmergencyDispatchPage() {
                   <Mic className="mr-2 h-5 w-5 text-muted-foreground" />
                   Control Room Comms (Voice-to-Text)
                 </Label>
-                <Textarea
-                  id="voiceInput"
-                  placeholder="E.g., '45-year-old male, complaining of severe chest pain and difficulty breathing...'"
-                  value={voiceInput}
-                  onChange={(e) => setVoiceInput(e.target.value)}
-                  rows={5}
-                  className="text-base"
-                  disabled={isLoadingCondition || isLoadingHospitals}
-                />
-                 <p className="text-xs text-muted-foreground">
-                  Simulate voice input by typing the transcribed text.
+                <div className="relative">
+                  <Textarea
+                    id="voiceInput"
+                    placeholder="마이크 버튼을 클릭하여 음성 입력을 시작하세요..."
+                    value={voiceInput}
+                    onChange={(e) => setVoiceInput(e.target.value)}
+                    rows={5}
+                    className="text-base pr-12"
+                    disabled={isLoadingCondition || isLoadingHospitals}
+                  />
+                  <Button
+                    type="button"
+                    variant={isListening ? "destructive" : "outline"}
+                    size="icon"
+                    className="absolute right-2 top-2"
+                    onClick={isListening ? stopListening : startListening}
+                    disabled={isLoadingCondition || isLoadingHospitals}
+                  >
+                    <Mic className={`h-4 w-4 ${isListening ? 'animate-pulse' : ''}`} />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {isListening ? '음성 인식 중...' : '마이크 버튼을 클릭하여 음성 입력을 시작하세요.'}
                 </p>
               </div>
               <div className="space-y-2">
