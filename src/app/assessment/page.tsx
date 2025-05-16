@@ -230,7 +230,7 @@ export default function ConditionAssessmentPage() {
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="bg-primary/10 p-4 rounded-md border border-primary/20">
                       <h4 className="text-xs uppercase tracking-wide font-bold text-primary mb-1">Severity</h4>
                       <p className="text-sm font-medium">
@@ -243,24 +243,13 @@ export default function ConditionAssessmentPage() {
                     </div>
                     
                     <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200">
-                      <h4 className="text-xs uppercase tracking-wide font-bold text-yellow-700 mb-1">Care Recommendation</h4>
+                      <h4 className="text-xs uppercase tracking-wide font-bold text-yellow-700 mb-1">Response Time</h4>
                       <p className="text-sm font-medium">
                         {assessmentResult.patientState.includes("severe") || assessmentResult.patientState.includes("critical") 
                           ? "IMMEDIATE MEDICAL INTERVENTION" 
                           : assessmentResult.patientState.includes("moderate") 
                             ? "URGENT MEDICAL ATTENTION" 
                             : "ROUTINE MEDICAL CARE"}
-                      </p>
-                    </div>
-                    
-                    <div className="bg-blue-50 p-4 rounded-md border border-blue-200">
-                      <h4 className="text-xs uppercase tracking-wide font-bold text-blue-700 mb-1">Monitoring Requirement</h4>
-                      <p className="text-sm font-medium">
-                        {assessmentResult.patientState.includes("severe") || assessmentResult.patientState.includes("critical") 
-                          ? "CONTINUOUS MONITORING" 
-                          : assessmentResult.patientState.includes("moderate") 
-                            ? "FREQUENT MONITORING" 
-                            : "REGULAR MONITORING"}
                       </p>
                     </div>
                   </div>
