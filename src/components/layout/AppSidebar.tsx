@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -43,7 +42,6 @@ const sidebarConfig = [
     groupIcon: Siren, // Using Siren as it's representative
     items: [
       { href: "/emergency-dispatch", label: "Emergency Dispatch", icon: Zap },
-      { href: "/tracking", label: "Ambulance Tracking", icon: MapPin },
     ],
   },
   {

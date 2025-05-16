@@ -1,4 +1,3 @@
-
 "use client";
 
 import { usePathname } from "next/navigation";
@@ -19,7 +18,6 @@ const navItems = [
   { href: "/", label: "Dashboard" },
   { href: "/emergency-dispatch", label: "Emergency Dispatch" },
   { href: "/hospital-portal", label: "Hospital Portal" },
-  { href: "/tracking", label: "Ambulance Tracking" },
 ];
 
 function getPageTitle(pathname: string): string {

@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Activity, AlertTriangle, ArrowRight, Bell, Hospital, ListChecks, MapPin, Siren, Users, Waypoints, Zap } from "lucide-react";
@@ -16,7 +15,6 @@ export default function DashboardPage() {
   const quickActions = [
     { label: "New Emergency Dispatch", href: "/emergency-dispatch", icon: Zap },
     { label: "View Hospital Portal", href: "/hospital-portal", icon: ListChecks },
-    { label: "Track Ambulances", href: "/tracking", icon: MapPin },
   ];
 
   return (
