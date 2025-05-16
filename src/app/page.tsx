@@ -1,128 +1,85 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Activity, AlertTriangle, ArrowRight, Bell, Hospital, ListChecks, MapPin, Siren, Users, Waypoints, Zap } from "lucide-react";
+import { AlertTriangle, Hospital, Siren } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
 export default function DashboardPage() {
-  const stats = [
-    { title: "Active Incidents", value: "12", icon: AlertTriangle, color: "text-destructive" },
-    { title: "Ambulances Available", value: "28", icon: Siren, color: "text-green-500" },
-    { title: "Hospitals Online", value: "7", icon: Hospital, color: "text-blue-500" },
-    { title: "Pending Requests", value: "3", icon: Bell, color: "text-yellow-500" },
-  ];
-
-  const quickActions = [
-    { label: "New Emergency Dispatch", href: "/emergency-dispatch", icon: Zap },
-    { label: "View Hospital Portal", href: "/hospital-portal", icon: ListChecks },
-  ];
-
   return (
-    <div className="space-y-6">
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-3xl">ResQ Command Center</CardTitle>
-          <CardDescription>Real-time overview of emergency medical operations.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p>Welcome to the ResQ platform. Monitor critical activities and manage resources efficiently.</p>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <Card key={stat.title} className="shadow-md hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-              <stat.icon className={`h-5 w-5 ${stat.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground">Updated just now</p>
-            </CardContent>
-          </Card>
-        ))}
+    <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-gradient-to-b from-slate-50 to-slate-100">
+      <div className="w-full max-w-4xl mb-12 text-center">
+        <h1 className="text-5xl font-bold tracking-tight mb-4 text-primary">ResQ</h1>
+        <p className="text-xl text-slate-600 mb-8">응급 의료 연결 시스템</p>
       </div>
 
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>Access key platform features quickly.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"> {/* Adjusted grid to 3 cols */}
-          {quickActions.map((action) => (
-            <Link href={action.href} key={action.label} passHref>
-              <Button variant="outline" className="w-full justify-start text-left h-auto py-3 shadow-sm hover:shadow-md transition-shadow">
-                <action.icon className="mr-3 h-5 w-5 text-primary" />
-                <div className="flex flex-col">
-                  <span className="font-semibold">{action.label}</span>
-                  <span className="text-xs text-muted-foreground">Go to {action.label.toLowerCase()}</span>
-                </div>
-                <ArrowRight className="ml-auto h-4 w-4 text-muted-foreground" />
-              </Button>
-            </Link>
-          ))}
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card className="shadow-lg">
+      <div className="w-full max-w-4xl">
+        <Card className="shadow-xl mb-8 border-primary/20 bg-white/80 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle>System Status</CardTitle>
-            <CardDescription>Current operational status of ResQ services.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse"></div>
-                <span>AI Services</span>
-              </div>
-              <span className="text-sm font-medium text-green-500">Operational</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse"></div>
-                <span>Hospital Network</span>
-              </div>
-              <span className="text-sm font-medium text-green-500">Operational</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full bg-yellow-500"></div>
-                <span>Ambulance GPS</span>
-              </div>
-              <span className="text-sm font-medium text-yellow-500">Degraded Performance</span>
-            </div>
-             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse"></div>
-                <span>Communication Channels</span>
-              </div>
-              <span className="text-sm font-medium text-green-500">Operational</span>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>Live Map Overview</CardTitle>
-             <CardDescription>Snapshot of current ambulance and hospital locations.</CardDescription>
+            <CardTitle className="text-3xl">사용자 유형 선택</CardTitle>
+            <CardDescription>역할에 따라 적절한 인터페이스를 이용하세요.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="aspect-video bg-muted rounded-md flex items-center justify-center">
-              <Image 
-                src="https://placehold.co/600x400.png" 
-                alt="Map Placeholder" 
-                width={600} 
-                height={400} 
-                className="rounded-md object-cover"
-                data-ai-hint="city map" 
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
+              {/* 구급대원 카드 */}
+              <Link href="/emergency-dispatch" className="group">
+                <Card className="h-full transition-all shadow-md hover:shadow-xl hover:scale-105 border-2 border-transparent hover:border-blue-500 overflow-hidden">
+                  <div className="h-40 bg-blue-500 flex items-center justify-center overflow-hidden">
+                    <Siren className="h-20 w-20 text-white opacity-75 group-hover:opacity-100 transition-all" />
+                  </div>
+                  <CardHeader>
+                    <CardTitle className="group-hover:text-blue-500 transition-colors">구급대원용</CardTitle>
+                    <CardDescription>
+                      응급 환자 정보 입력 및 병원 추천, 환자 이송 요청을 관리합니다.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2 text-sm text-slate-600">
+                      <li className="flex items-center">• 환자 상태 AI 분석</li>
+                      <li className="flex items-center">• 최적 병원 추천</li>
+                      <li className="flex items-center">• 병원 수락/거부 알림</li>
+                    </ul>
+                    <Button className="w-full mt-6 bg-blue-500 hover:bg-blue-600 text-white">
+                      구급대원 인터페이스 입장
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Link>
+
+              {/* 병원 카드 */}
+              <Link href="/hospital-portal" className="group">
+                <Card className="h-full transition-all shadow-md hover:shadow-xl hover:scale-105 border-2 border-transparent hover:border-green-500 overflow-hidden">
+                  <div className="h-40 bg-green-500 flex items-center justify-center overflow-hidden">
+                    <Hospital className="h-20 w-20 text-white opacity-75 group-hover:opacity-100 transition-all" />
+                  </div>
+                  <CardHeader>
+                    <CardTitle className="group-hover:text-green-500 transition-colors">병원용</CardTitle>
+                    <CardDescription>
+                      환자 이송 요청을 관리하고 구급대원과 실시간으로 소통합니다.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2 text-sm text-slate-600">
+                      <li className="flex items-center">• 실시간 이송 요청 수신</li>
+                      <li className="flex items-center">• 요청 승인/거부 관리</li>
+                      <li className="flex items-center">• 구급대원 피드백 제공</li>
+                    </ul>
+                    <Button className="w-full mt-6 bg-green-500 hover:bg-green-600 text-white">
+                      병원 포털 입장
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Link>
             </div>
-             <Button variant="secondary" className="w-full mt-4">
-              Go to Full Map View <MapPin className="ml-2 h-4 w-4" />
-            </Button>
           </CardContent>
         </Card>
+        
+        <div className="text-center mt-8 text-slate-500">
+          <p className="text-sm mb-2">© 2024 ResQ 응급 의료 연결 시스템</p>
+          <div className="flex justify-center items-center space-x-2 mt-2">
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <p className="text-xs">이 시스템은 시연용으로, 실제 응급 상황에서는 112나 119로 즉시 전화하세요.</p>
+          </div>
+        </div>
       </div>
     </div>
   );

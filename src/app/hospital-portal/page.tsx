@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -20,6 +19,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { hospitalNotificationService } from "@/lib/hospital-notification";
 
 const THIS_HOSPITAL_ID = "HOS_SNUH"; // This portal's hospital ID (서울대학교병원)
 const THIS_HOSPITAL_NAME = "서울대학교병원"; // Seoul National University Hospital
@@ -39,17 +39,109 @@ export default function HospitalPortalPage() {
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const { toast } = useToast();
 
+  // 페이지 로드 시 로컬 스토리지에서 이전 요청 상태 확인
+  useEffect(() => {
+    // 로컬 스토리지에서 이전 알림 확인
+    const notifications = hospitalNotificationService.getNotifications();
+    
+    // 기존 요청 상태 업데이트
+    if (notifications.length > 0) {
+      // 요청 ID별로 가장 최신 상태 추출
+      const latestStatusByRequestId = new Map<string, PatientAdmissionRequest>();
+      
+      notifications.forEach(notification => {
+        const request = notification.request;
+        if (!latestStatusByRequestId.has(request.id) || 
+            new Date(notification.timestamp) > new Date(latestStatusByRequestId.get(request.id)!.requestTimestamp)) {
+          latestStatusByRequestId.set(request.id, request);
+        }
+      });
+      
+      // 기존 요청 업데이트
+      setRequests(prevRequests => 
+        prevRequests.map(req => {
+          const updatedReq = latestStatusByRequestId.get(req.id);
+          return updatedReq && updatedReq.status !== 'pending' ? updatedReq : req;
+        })
+      );
+    }
+
+    // 구급대원 페이지에서 생성된 요청 확인
+    if (typeof window !== 'undefined') {
+      // 로컬 스토리지에서 모든 키 가져오기
+      const allKeys = Object.keys(localStorage);
+      
+      // 병원 요청 키 필터링
+      const requestKeys = allKeys.filter(key => key.startsWith('hospital_request_'));
+      
+      if (requestKeys.length > 0) {
+        const newRequests: PatientAdmissionRequest[] = [];
+        
+        // 각 요청 처리
+        requestKeys.forEach(key => {
+          try {
+            const requestData = localStorage.getItem(key);
+            if (requestData) {
+              const request = JSON.parse(requestData) as PatientAdmissionRequest;
+              
+              // 이 병원에 대한 요청만 표시
+              if (request.hospitalId === THIS_HOSPITAL_NAME) {
+                newRequests.push(request);
+              }
+            }
+          } catch (error) {
+            console.error('Error parsing request data:', error);
+          }
+        });
+        
+        // 새 요청 추가 (중복 방지)
+        if (newRequests.length > 0) {
+          setRequests(prevRequests => {
+            const newRequestIds = new Set(newRequests.map(r => r.id));
+            const filteredPrevRequests = prevRequests.filter(r => !newRequestIds.has(r.id));
+            return [...newRequests, ...filteredPrevRequests.slice(0, 9)];
+          });
+          return; // 로컬 스토리지에서 요청을 찾았으면 추가 요청 생성하지 않음
+        }
+      }
+    }
+  }, []);
+
   const handleUpdateRequestStatus = (id: string, newStatus: 'accepted' | 'rejected', reason?: string) => {
-    setRequests(prevRequests =>
-      prevRequests.map(req =>
-        req.id === id ? { ...req, status: newStatus, rejectionReason: newStatus === 'rejected' ? reason : undefined } : req
-      )
+    const updatedRequest = requests.find(req => req.id === id);
+    if (!updatedRequest) return;
+
+    const updatedRequests = requests.map(req =>
+      req.id === id ? { ...req, status: newStatus, rejectionReason: newStatus === 'rejected' ? reason : undefined } : req
     );
+    setRequests(updatedRequests);
+
     toast({
-      title: `Request ${newStatus === 'accepted' ? 'Accepted' : 'Rejected'}`,
-      description: `Patient transfer request ${id} has been updated.`,
+      title: `요청 ${newStatus === 'accepted' ? '수락됨' : '거부됨'}`,
+      description: `환자 이송 요청 ${id}가 업데이트되었습니다.`,
       variant: newStatus === 'accepted' ? "default" : "destructive",
     });
+
+    // 로컬 스토리지에서 요청 삭제 (처리 완료되었으므로)
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(`hospital_request_${id}`);
+    }
+
+    // 알림 생성 및 저장
+    hospitalNotificationService.notify({
+      id: `notification_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      type: newStatus === 'accepted' ? 'ACCEPTED' : 'REJECTED',
+      request: { 
+        ...updatedRequest, 
+        status: newStatus, 
+        rejectionReason: newStatus === 'rejected' ? reason : undefined 
+      },
+      timestamp: new Date().toISOString(),
+      message: newStatus === 'accepted' 
+        ? `${THIS_HOSPITAL_NAME}에서 환자 이송 요청을 수락했습니다.` 
+        : `${THIS_HOSPITAL_NAME}에서 환자 이송 요청을 거부했습니다. 사유: ${reason}`
+    });
+
     if (newStatus === 'rejected') {
       setIsRejectDialogOpen(false);
       setRejectionReason("");
@@ -62,7 +154,49 @@ export default function HospitalPortalPage() {
   };
 
   const refreshRequests = () => {
-    toast({ title: "Refreshing data...", description: "Fetching latest transfer requests." });
+    toast({ title: "데이터 새로고침 중...", description: "최신 이송 요청을 불러오는 중입니다." });
+    
+    // 구급대원 페이지에서 생성된 요청 확인
+    if (typeof window !== 'undefined') {
+      // 로컬 스토리지에서 모든 키 가져오기
+      const allKeys = Object.keys(localStorage);
+      
+      // 병원 요청 키 필터링
+      const requestKeys = allKeys.filter(key => key.startsWith('hospital_request_'));
+      
+      if (requestKeys.length > 0) {
+        const newRequests: PatientAdmissionRequest[] = [];
+        
+        // 각 요청 처리
+        requestKeys.forEach(key => {
+          try {
+            const requestData = localStorage.getItem(key);
+            if (requestData) {
+              const request = JSON.parse(requestData) as PatientAdmissionRequest;
+              
+              // 이 병원에 대한 요청만 표시
+              if (request.hospitalId === THIS_HOSPITAL_NAME) {
+                newRequests.push(request);
+              }
+            }
+          } catch (error) {
+            console.error('Error parsing request data:', error);
+          }
+        });
+        
+        // 새 요청 추가 (중복 방지)
+        if (newRequests.length > 0) {
+          setRequests(prevRequests => {
+            const newRequestIds = new Set(newRequests.map(r => r.id));
+            const filteredPrevRequests = prevRequests.filter(r => !newRequestIds.has(r.id));
+            return [...newRequests, ...filteredPrevRequests.slice(0, 9)];
+          });
+          return; // 로컬 스토리지에서 요청을 찾았으면 추가 요청 생성하지 않음
+        }
+      }
+    }
+    
+    // 로컬 스토리지에서 요청을 찾지 못한 경우, 임의의 요청 생성
     const seoulDistricts = ["Gangnam-gu", "Seocho-gu", "Songpa-gu", "Jongno-gu", "Jung-gu", "Yongsan-gu", "Mapo-gu", "Yeongdeungpo-gu", "Dongjak-gu", "Gwanak-gu"];
     const randomDistrict = seoulDistricts[Math.floor(Math.random() * seoulDistricts.length)];
     
@@ -78,11 +212,12 @@ export default function HospitalPortalPage() {
       status: "pending", 
       hospitalId: THIS_HOSPITAL_ID 
     };
+    
     const pendingCount = requests.filter(r => r.status === 'pending').length;
     if (pendingCount < 5) { // Limit adding new requests if too many are pending
       setRequests(prev => [newMockRequest, ...prev.filter(r => r.id !== newMockRequest.id).slice(0, 9)]);
     } else {
-        toast({ title: "Data Refresh Skipped", description: "Too many pending requests. Process existing ones first."});
+        toast({ title: "데이터 새로고침 건너뜀", description: "대기 중인 요청이 너무 많습니다. 먼저 기존 요청을 처리하세요."});
     }
   };
 
@@ -104,19 +239,19 @@ export default function HospitalPortalPage() {
           <div>
             <div className="flex items-center gap-2">
               <Hospital className="h-7 w-7 text-primary" />
-              <CardTitle className="text-2xl">{THIS_HOSPITAL_NAME} - Patient Transfer Management Portal</CardTitle>
+              <CardTitle className="text-2xl">{THIS_HOSPITAL_NAME} - 환자 이송 관리 포털</CardTitle>
             </div>
-            <CardDescription>Manage incoming patient transfer requests in real-time. (Target Hospital: {THIS_HOSPITAL_NAME})</CardDescription>
+            <CardDescription>실시간으로 들어오는 환자 이송 요청을 관리합니다. (대상 병원: {THIS_HOSPITAL_NAME})</CardDescription>
           </div>
           <Button onClick={refreshRequests} variant="outline">
-            <RefreshCw className="mr-2 h-4 w-4" /> Refresh
+            <RefreshCw className="mr-2 h-4 w-4" /> 새로고침
           </Button>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
             <Card className="bg-yellow-500/10 border-yellow-500">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
+                <CardTitle className="text-sm font-medium">대기 중인 요청</CardTitle>
                 <AlertTriangle className="h-4 w-4 text-yellow-600" />
               </CardHeader>
               <CardContent>
@@ -125,7 +260,7 @@ export default function HospitalPortalPage() {
             </Card>
             <Card className="bg-green-500/10 border-green-500">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Accepted Today</CardTitle>
+                <CardTitle className="text-sm font-medium">오늘 수락</CardTitle>
                 <CheckCircle className="h-4 w-4 text-green-600" />
               </CardHeader>
               <CardContent>
@@ -134,7 +269,7 @@ export default function HospitalPortalPage() {
             </Card>
              <Card className="bg-red-500/10 border-red-500">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Rejected Today</CardTitle>
+                <CardTitle className="text-sm font-medium">오늘 거부</CardTitle>
                 <XCircle className="h-4 w-4 text-red-600" />
               </CardHeader>
               <CardContent>
@@ -143,11 +278,11 @@ export default function HospitalPortalPage() {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Current Bed Occupancy</CardTitle>
+                <CardTitle className="text-sm font-medium">현재 병상 점유율</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">85% <span className="text-xs text-muted-foreground">Occupied</span></div>
+                <div className="text-2xl font-bold">85% <span className="text-xs text-muted-foreground">점유됨</span></div>
               </CardContent>
             </Card>
           </div>
@@ -155,14 +290,14 @@ export default function HospitalPortalPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[150px]">Request ID</TableHead>
-                <TableHead>Patient Info</TableHead>
-                <TableHead>Primary Symptoms/Condition</TableHead>
-                <TableHead>Transporting Ambulance</TableHead>
-                <TableHead>ETA</TableHead>
-                <TableHead>Request Time</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right w-[200px]">Action</TableHead>
+                <TableHead className="w-[150px]">요청 ID</TableHead>
+                <TableHead>환자 정보</TableHead>
+                <TableHead>주요 증상/상태</TableHead>
+                <TableHead>이송 구급차</TableHead>
+                <TableHead>예상시간</TableHead>
+                <TableHead>요청 시간</TableHead>
+                <TableHead>상태</TableHead>
+                <TableHead className="text-right w-[200px]">작업</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -170,9 +305,9 @@ export default function HospitalPortalPage() {
                 <TableRow key={req.id} className={req.status === 'pending' ? 'bg-yellow-500/5' : ''}>
                   <TableCell className="font-medium">{req.id}</TableCell>
                   <TableCell>
-                    {req.patientInfo.age && `${req.patientInfo.age} y/o `}{req.patientInfo.gender || ''}
+                    {req.patientInfo.age && `${req.patientInfo.age}세 `}{req.patientInfo.gender || ''}
                     {req.patientInfo.briefHistory && <p className="text-xs text-muted-foreground">{req.patientInfo.briefHistory}</p>}
-                     <p className="text-xs text-muted-foreground">Incident Loc: {req.incidentLocation}</p>
+                     <p className="text-xs text-muted-foreground">사고 위치: {req.incidentLocation}</p>
                   </TableCell>
                   <TableCell>
                     {req.assessedCondition}
@@ -189,25 +324,25 @@ export default function HospitalPortalPage() {
                     } className={
                       req.status === "accepted" ? "bg-green-500 hover:bg-green-600 text-white" : ""
                     }>
-                      {req.status === "pending" ? "Pending" : req.status === "accepted" ? "Accepted" : "Rejected"}
+                      {req.status === "pending" ? "대기 중" : req.status === "accepted" ? "수락됨" : "거부됨"}
                     </Badge>
                     {req.status === 'rejected' && req.rejectionReason && (
-                        <p className="text-xs text-muted-foreground mt-1">Reason: {req.rejectionReason}</p>
+                        <p className="text-xs text-muted-foreground mt-1">사유: {req.rejectionReason}</p>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
                     {req.status === "pending" && (
                       <div className="space-x-2">
                         <Button variant="default" size="sm" onClick={() => handleUpdateRequestStatus(req.id, "accepted")} className="bg-green-500 hover:bg-green-600">
-                          <CheckCircle className="mr-1 h-4 w-4" /> Accept
+                          <CheckCircle className="mr-1 h-4 w-4" /> 수락
                         </Button>
                         <Button variant="destructive" size="sm" onClick={() => openRejectDialog(req)}>
-                          <XCircle className="mr-1 h-4 w-4" /> Reject
+                          <XCircle className="mr-1 h-4 w-4" /> 거부
                         </Button>
                       </div>
                     )}
                      {req.status !== "pending" && (
-                        <span className="text-xs text-muted-foreground">Actioned</span>
+                        <span className="text-xs text-muted-foreground">처리됨</span>
                      )}
                   </TableCell>
                 </TableRow>
@@ -215,7 +350,7 @@ export default function HospitalPortalPage() {
             </TableBody>
           </Table>
           {requests.length === 0 && (
-            <p className="text-center text-muted-foreground py-8">No transfer requests at the moment.</p>
+            <p className="text-center text-muted-foreground py-8">현재 이송 요청이 없습니다.</p>
           )}
         </CardContent>
       </Card>
@@ -223,29 +358,29 @@ export default function HospitalPortalPage() {
       <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reject Transfer Request: {selectedRequest?.id}</DialogTitle>
+            <DialogTitle>이송 요청 거부: {selectedRequest?.id}</DialogTitle>
             <DialogDescription>
-              Please enter the reason for rejecting the patient transfer request. This information is crucial for EOC and ambulance rerouting.
+              환자 이송 요청을 거부하는 이유를 입력해주세요. 이 정보는 응급의료센터와 구급차 재배정에 중요합니다.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-2">
-            <Label htmlFor="rejectionReason">Rejection Reason</Label>
+            <Label htmlFor="rejectionReason">거부 사유</Label>
             <Textarea
               id="rejectionReason"
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
-              placeholder="E.g., ICU bed shortage, specialist unavailable, hospital at full capacity, etc."
+              placeholder="예: ICU 병상 부족, 전문의 부재, 병원 만원 등"
               rows={3}
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRejectDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setIsRejectDialogOpen(false)}>취소</Button>
             <Button 
               variant="destructive" 
               onClick={() => selectedRequest && handleUpdateRequestStatus(selectedRequest.id, "rejected", rejectionReason)}
               disabled={!rejectionReason.trim()}
             >
-              Confirm Rejection
+              거부 확인
             </Button>
           </DialogFooter>
         </DialogContent>
